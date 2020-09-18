@@ -109,6 +109,7 @@ def main() :
         else :
             rec['zoom_deleted'] = False
             """
+        print("uploaded {} {} from {} {} of size {}".format(rec['recording_start'], rec['topic'], rec['first_name'], rec['last_name'], rec['file_size']) )
         
     df = pd.json_normalize(l_records)
     Sheets().Insert(df, 'Recordings')
