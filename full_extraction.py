@@ -4,6 +4,7 @@ import pandas as pd
 from utils import Sheets, fechas
 from urllib.parse import quote
 import creds
+import time
 
 RECORDING_TYPES = ['chat_file', 'shared_screen_with_gallery_view', 'gallery_view', 'shared_screen_with_speaker_view']
 
@@ -94,8 +95,11 @@ def main() :
             'user_name' : '{} {}'.format(rec['first_name'], rec['last_name'])
         }
         r = session.get("https://9ffy69ln51.execute-api.us-east-1.amazonaws.com/default/UploadDrive", params = event)
-        file_id = r.json()['file_id']
-        rec['drive_url'] = "https://drive.google.com/file/d/{}/view".format(file_id)
+        if 'file_id' in r.json() :
+            file_id = r.json()['file_id']
+            rec['drive_url'] = "https://drive.google.com/file/d/{}/view".format(file_id)
+        else :
+            print (r.json())
 
         #Delete recording from Zoom cloud
         """
@@ -110,6 +114,7 @@ def main() :
             rec['zoom_deleted'] = False
             """
         print("uploaded {} {} from {} {} of size {}".format(rec['recording_start'], rec['topic'], rec['first_name'], rec['last_name'], rec['file_size']) )
+        time.sleep(30)
         
     df = pd.json_normalize(l_records)
     Sheets().Insert(df, 'Recordings')

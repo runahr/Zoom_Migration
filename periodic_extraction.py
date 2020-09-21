@@ -4,6 +4,7 @@ import datetime
 from urllib.parse import quote
 from utils2 import google_creds
 import pygsheets
+import time
 import creds
 
 RECORDING_TYPES = ['chat_file', 'shared_screen_with_gallery_view', 'gallery_view', 'shared_screen_with_speaker_view']
@@ -27,7 +28,7 @@ def main() :
 
     #date range for extraction
     end = datetime.date.today()
-    start = end - datetime.timedelta(days=7)
+    start = end - datetime.timedelta(days=2)
 
     #Get all recordings for all users starting from 'start', month by month
     l_records = []
@@ -84,35 +85,32 @@ def main() :
     spdsheet = con.open_by_url(os.environ["gsheet_url"])
     sheet = spdsheet.worksheet_by_title('Recordings')
 
+    ids_uploaded = sheet.get_col(1, include_tailing_empty=False)
+
     print("Total Recordings: ", len(l_records))
 
     #For each record, call the API for uploading to drive
     for rec in l_records :
-        event = {
-            'url':rec['download_url'],
-            'name': '{} {}'.format(rec['recording_start'], rec['topic']),
-            'file_type':rec['file_type'].lower(),
-            'user_id':rec['user_id'],
-            'user_name' : '{} {}'.format(rec['first_name'], rec['last_name'])
-        }
-        r = session.get("https://9ffy69ln51.execute-api.us-east-1.amazonaws.com/default/UploadDrive", params = event)
-        file_id = r.json()['file_id']
-        rec['drive_url'] = "https://drive.google.com/file/d/{}/view".format(file_id)
-
-        #Delete recording from Zoom cloud
-        """
-        if rec['meeting_uuid'].startswith('/') or '//' in rec['meeting_uuid'] :
-            muuid = quote(quote(rec['meeting_uuid'], safe=''), safe='')
-        else :
-            mmuid = rec['meeting_uuid']
-        r2 = session.delete("https://api.zoom.us/v2/meetings/{}/recordings/{}".format(mmuid, rec['recording_id']), headers = header)
-        if r2.status_code == 204 :
-            rec['zoom_deleted'] = True
-        else :
-            rec['zoom_deleted'] = False
-            """
+        if rec['recording_id'] not in ids_uploaded :
+            event = {
+                'url':rec['download_url'],
+                'name': '{} {}'.format(rec['recording_start'], rec['topic']),
+                'file_type':rec['file_type'].lower(),
+                'user_id':rec['user_id'],
+                'user_name' : '{} {}'.format(rec['first_name'], rec['last_name'])
+            }
+            r = session.get("https://9ffy69ln51.execute-api.us-east-1.amazonaws.com/default/UploadDrive", params = event)
+            if 'file_id' in r.json() :
+                file_id = r.json()['file_id']
+                rec['drive_url'] = "https://drive.google.com/file/d/{}/view".format(file_id)
+            else :
+                print (r.json())
+    
+                
+            #upload to sheet
+            sheet.append_table(values = list(rec.values()), start = 'A1', dimension = 'ROWS', overwrite = False)
+            print("uploaded {} {} from {} {} of size {}".format(rec['recording_start'], rec['topic'], rec['first_name'], rec['last_name'], rec['file_size']) )
+            time.sleep(30)
             
-        #upload to sheet
-        sheet.append_table(values = list(rec.values()), start = 'A1', dimension = 'ROWS', overwrite = False)
 
 main() 
