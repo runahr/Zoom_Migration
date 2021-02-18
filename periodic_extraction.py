@@ -81,7 +81,7 @@ def main() :
                         
         print("Got {} URLs".format(d_users[user]['first_name']))
         
-    con = pygsheets.authorize(custom_credentials= google_creds())
+    con = pygsheets.authorize(service_account_file= "client_secret.json")
     spdsheet = con.open_by_url(os.environ["gsheet_url"])
     sheet = spdsheet.worksheet_by_title('Recordings')
 

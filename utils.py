@@ -54,7 +54,7 @@ def google_creds() :
     return creds
 
 class Sheets() :
-    con = pygsheets.authorize(custom_credentials= google_creds())
+    con = pygsheets.authorize(service_account_file= "client_secret.json")
     def Insert(self, dat, s) :
         con = self.con
         spdsheet = con.open_by_url(os.environ["gsheet_url"])
